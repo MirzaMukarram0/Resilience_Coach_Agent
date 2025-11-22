@@ -12,6 +12,8 @@ The Resilience Coach Agent is designed to help users manage stress, build emotio
 - **Stress Level Detection**: Identifies stress indicators in user input
 - **Personalized Recommendations**: Provides breathing exercises, grounding techniques, and mindfulness tasks
 - **Empathetic Conversation**: Natural, supportive communication style
+- **Robust Input Validation**: Prevents empty, spam, and malicious inputs
+- **Security Hardened**: XSS prevention, rate limiting, and comprehensive error handling
 - **Privacy-First**: No personal data storage, anonymized logging only
 - **Supervisor Integration**: JSON-based API for external system connectivity
 
@@ -121,13 +123,32 @@ Resilience_Coach_Agent/
 
 ## 🧪 Testing
 
-Test the API manually:
+### Automated Test Suite:
+```bash
+python test_api.py
+```
+Runs 11 comprehensive tests including:
+- Valid requests
+- Input validation (empty, short, long)
+- Spam detection
+- XSS prevention
+- Missing/invalid fields
+- Multiple emotional states
+
+### Quick Verification:
+```bash
+python quick_verify.py
+```
+
+### Manual Tests:
 ```bash
 # Health check
 curl http://localhost:5000/health
 
-# Test resilience endpoint
+# Valid request
 curl -X POST http://localhost:5000/resilience -H "Content-Type: application/json" -d "{\"agent\":\"resilience_coach\",\"input_text\":\"I feel stressed\"}"
+
+# See manual_tests.ps1 for more examples
 ```
 
 ## 📝 API Documentation
@@ -162,8 +183,17 @@ curl -X POST http://localhost:5000/resilience -H "Content-Type: application/json
 }
 ```
 
-## 🔒 Privacy & Ethics
+## 🔒 Security & Privacy
 
+### Security Features:
+- **Input Validation**: All inputs validated and sanitized
+- **XSS Prevention**: Blocks script tags and malicious code
+- **Rate Limiting**: 30 requests per minute per user
+- **Spam Detection**: Filters gibberish and repeated characters
+- **Response Validation**: Prevents hallucination and invalid outputs
+- **Error Handling**: Comprehensive error handling at all levels
+
+### Privacy:
 - No personal identifiers stored
 - Anonymized logging only
 - Not a replacement for professional mental health services

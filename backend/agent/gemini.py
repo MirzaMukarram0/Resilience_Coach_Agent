@@ -5,6 +5,8 @@ Handles all interactions with Google's Gemini API for emotional analysis
 import google.generativeai as genai
 from backend.agent.config import Config
 import logging
+import time
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ class GeminiClient:
     
     def analyze_emotion(self, user_input: str) -> dict:
         """
-        Analyze user's emotional state and stress level
+        Analyze user's emotional state and stress level with retry logic
         
         Args:
             user_input: User's text input
@@ -32,34 +34,49 @@ class GeminiClient:
         Returns:
             dict: Analysis containing sentiment, stress_level, and emotions
         """
-        try:
-            prompt = self._build_analysis_prompt(user_input)
-            
-            response = self.model.generate_content(
-                prompt,
-                generation_config={
-                    'temperature': Config.TEMPERATURE,
-                    'max_output_tokens': Config.MAX_TOKENS,
-                }
-            )
-            
-            analysis = self._parse_analysis_response(response.text)
-            logger.info(f"Analysis completed - Sentiment: {analysis['sentiment']}, Stress: {analysis['stress_level']}")
-            
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Error analyzing emotion: {e}")
-            # Return default analysis on error
-            return {
-                'sentiment': 'neutral',
-                'stress_level': 'medium',
-                'emotions': ['uncertain']
-            }
+        prompt = self._build_analysis_prompt(user_input)
+        
+        for attempt in range(Config.API_RETRY_ATTEMPTS):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config={
+                        'temperature': Config.TEMPERATURE,
+                        'max_output_tokens': Config.MAX_TOKENS,
+                    }
+                )
+                
+                analysis = self._parse_analysis_response(response.text)
+                logger.info(f"Analysis completed - Sentiment: {analysis['sentiment']}, Stress: {analysis['stress_level']}")
+                
+                return analysis
+                
+            except Exception as e:
+                error_str = str(e)
+                
+                # Check for rate limit error (429)
+                if '429' in error_str or 'quota' in error_str.lower():
+                    if attempt < Config.API_RETRY_ATTEMPTS - 1:
+                        wait_time = Config.API_RETRY_DELAY * (attempt + 1)
+                        logger.warning(f"Rate limit hit, retrying in {wait_time}s (attempt {attempt + 1}/{Config.API_RETRY_ATTEMPTS})")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        logger.error(f"Rate limit exceeded after {Config.API_RETRY_ATTEMPTS} attempts")
+                else:
+                    logger.error(f"Error analyzing emotion: {e}")
+                
+                # Return default analysis on final error
+                if attempt == Config.API_RETRY_ATTEMPTS - 1:
+                    return {
+                        'sentiment': 'neutral',
+                        'stress_level': 'medium',
+                        'emotions': ['uncertain']
+                    }
     
     def generate_supportive_message(self, user_input: str, analysis: dict) -> str:
         """
-        Generate empathetic and supportive message
+        Generate empathetic and supportive message with retry logic
         
         Args:
             user_input: User's text input
@@ -68,25 +85,49 @@ class GeminiClient:
         Returns:
             str: Supportive message
         """
-        try:
-            prompt = self._build_support_prompt(user_input, analysis)
-            
-            response = self.model.generate_content(
-                prompt,
-                generation_config={
-                    'temperature': 0.8,  # Higher temperature for more varied responses
-                    'max_output_tokens': 150,
-                }
-            )
-            
-            message = response.text.strip()
-            logger.info("Supportive message generated")
-            
-            return message
-            
-        except Exception as e:
-            logger.error(f"Error generating support message: {e}")
-            return "I'm here to support you. Take things one step at a time."
+        prompt = self._build_support_prompt(user_input, analysis)
+        
+        for attempt in range(Config.API_RETRY_ATTEMPTS):
+            try:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config={
+                        'temperature': 0.8,  # Higher temperature for more varied responses
+                        'max_output_tokens': 150,
+                    }
+                )
+                
+                # Handle response parts properly
+                try:
+                    message = response.text.strip()
+                except:
+                    # If response.text doesn't work, try parts
+                    if response.candidates and len(response.candidates) > 0:
+                        candidate = response.candidates[0]
+                        if candidate.content and candidate.content.parts:
+                            message = ''.join(part.text for part in candidate.content.parts).strip()
+                        else:
+                            message = "I'm here to support you. Take things one step at a time."
+                    else:
+                        message = "I'm here to support you. Take things one step at a time."
+                
+                logger.info("Supportive message generated")
+                return message
+                
+            except Exception as e:
+                error_str = str(e)
+                
+                # Check for rate limit error
+                if '429' in error_str or 'quota' in error_str.lower():
+                    if attempt < Config.API_RETRY_ATTEMPTS - 1:
+                        wait_time = Config.API_RETRY_DELAY * (attempt + 1)
+                        logger.warning(f"Rate limit hit, retrying in {wait_time}s")
+                        time.sleep(wait_time)
+                        continue
+                
+                logger.error(f"Error generating support message: {e}")
+                if attempt == Config.API_RETRY_ATTEMPTS - 1:
+                    return "I'm here to support you. Take things one step at a time."
     
     def _build_analysis_prompt(self, user_input: str) -> str:
         """Build prompt for emotional analysis"""
