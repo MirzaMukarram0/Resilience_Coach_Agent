@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resilience Coach Agent</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧘 Resilience Coach Agent</h1>
+            <p>Your AI-powered mental wellness companion</p>
+        </header>
+        
+        <main>
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome-message">
+                    <p>👋 Hello! I'm here to support you with stress management and emotional wellness.</p>
+                    <p>Share how you're feeling, and I'll provide personalized coping strategies.</p>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <textarea 
+                    id="userInput" 
+                    placeholder="How are you feeling today? Share your thoughts..."
+                    rows="3"
+                ></textarea>
+                <button id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
+        </main>
+        
+        <footer>
+            <p class="disclaimer">⚠️ This is not a replacement for professional mental health services.</p>
+        </footer>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
