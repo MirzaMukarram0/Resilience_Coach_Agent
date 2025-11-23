@@ -9,31 +9,42 @@
 <body>
     <div class="container">
         <header>
-            <h1>🧘 Resilience Coach Agent</h1>
-            <p>Your AI-powered mental wellness companion</p>
+            <div class="header-content">
+                <h1>Resilience Coach Agent</h1>
+                <p class="subtitle">AI-Powered Mental Wellness Support</p>
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Connecting...</span>
+            </div>
         </header>
         
-        <main>
-            <div class="chat-container" id="chatContainer">
-                <div class="welcome-message">
-                    <p>👋 Hello! I'm here to support you with stress management and emotional wellness.</p>
-                    <p>Share how you're feeling, and I'll provide personalized coping strategies.</p>
+        <div class="chat-container" id="chatContainer">
+            <div class="welcome-message">
+                <h3>Welcome</h3>
+                <p>I'm here to support you through challenging moments. Share what's on your mind, and I'll provide personalized coping strategies and emotional support.</p>
+                <div class="disclaimer">
+                    <strong>Note:</strong> This is an AI assistant and not a replacement for professional mental health services.
                 </div>
             </div>
-            
-            <div class="input-container">
+        </div>
+        
+        <div class="input-area">
+            <div class="input-wrapper">
                 <textarea 
                     id="userInput" 
-                    placeholder="How are you feeling today? Share your thoughts..."
+                    placeholder="Share your thoughts, feelings, or concerns..."
                     rows="3"
+                    maxlength="2000"
                 ></textarea>
-                <button id="sendBtn" onclick="sendMessage()">Send</button>
+                <div class="input-footer">
+                    <span class="char-count" id="charCount">0 / 2000</span>
+                    <button id="sendButton" onclick="sendMessage()" disabled>
+                        <span id="buttonText">Send Message</span>
+                    </button>
+                </div>
             </div>
-        </main>
-        
-        <footer>
-            <p class="disclaimer">⚠️ This is not a replacement for professional mental health services.</p>
-        </footer>
+        </div>
     </div>
     
     <script src="app.js"></script>
