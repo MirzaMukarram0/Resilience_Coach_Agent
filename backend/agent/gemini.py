@@ -73,85 +73,199 @@ class GeminiClient:
     
     def _rule_based_analysis(self, text: str) -> dict:
         """
-        Simple rule-based emotional analysis fallback
-        when Gemini API is unavailable
+        Enhanced rule-based emotional analysis with deep pattern recognition
+        Analyzes context, metaphors, and implicit emotional cues
         """
         text_lower = text.lower()
         
-        # Negative emotion keywords
-        negative_keywords = {
-            'sad': 'sadness', 'depressed': 'depression', 'lonely': 'loneliness',
-            'anxious': 'anxiety', 'worried': 'worry', 'scared': 'fear',
-            'stressed': 'stress', 'overwhelmed': 'overwhelm', 'panic': 'panic',
-            'angry': 'anger', 'frustrated': 'frustration', 'hopeless': 'hopelessness',
-            'suicidal': 'crisis', 'suicide': 'crisis', 'harm': 'crisis',
-            'hurt': 'pain', 'cry': 'sadness', 'afraid': 'fear'
-        }
+        # CRISIS DETECTION - Explicit and implicit
+        explicit_crisis = ['suicidal', 'suicide', 'kill myself', 'end it all', 
+                          'harm myself', 'want to die', 'better off dead', 'end my life']
         
-        # Positive emotion keywords
-        positive_keywords = {
-            'happy': 'happiness', 'joy': 'joy', 'excited': 'excitement',
-            'grateful': 'gratitude', 'love': 'love', 'content': 'contentment',
-            'proud': 'pride', 'calm': 'calmness', 'peaceful': 'peace',
-            'good': 'positivity', 'great': 'positivity', 'wonderful': 'joy'
-        }
+        implicit_crisis = [
+            "don't see the point", "no point", "pointless", "why bother",
+            "fading", "disappearing", "not exist", "tired of existing",
+            "give up on life", "can't go on", "rather not be here"
+        ]
         
-        # High stress indicators
-        high_stress_keywords = ['overwhelmed', 'panic', 'can\'t cope', 'too much',
-                                'breaking down', 'suicidal', 'suicide', 'crisis']
+        # LONELINESS & ISOLATION patterns (nuanced)
+        loneliness_patterns = [
+            "no one", "invisible", "no one sees me", "no one cares", "all alone",
+            "nobody understands", "surrounded but", "people but feel", "pretend i'm fine",
+            "smile so", "mask", "hiding", "fake", "no one would notice"
+        ]
         
-        # Medium stress indicators
-        medium_stress_keywords = ['stressed', 'worried', 'anxious', 'nervous',
-                                  'pressure', 'tense', 'difficult']
+        # HOPELESSNESS patterns
+        hopelessness_patterns = [
+            "no hope", "hopeless", "nothing will change", "never get better",
+            "always be like this", "stuck forever", "no future", "no way out",
+            "tried everything", "nothing works", "pointless to try"
+        ]
         
-        # Detect emotions
+        # EMOTIONAL EXHAUSTION / BURNOUT patterns
+        burnout_patterns = [
+            "tired but can't rest", "exhausted beyond", "sleep doesn't help",
+            "drained", "empty", "running on empty", "burnt out", "numb",
+            "nothing excites", "lost interest", "don't care anymore",
+            "going through motions", "feel nothing"
+        ]
+        
+        # OVERWHELM patterns
+        overwhelm_patterns = [
+            "too much", "can't handle", "falling behind", "drowning",
+            "suffocating", "crushing", "can't keep up", "everything at once",
+            "losing control", "spiraling", "can't breathe"
+        ]
+        
+        # ANXIETY patterns
+        anxiety_patterns = [
+            "panic", "racing", "can't calm", "on edge", "terrified",
+            "scared", "fear", "anxious", "worried sick", "catastrophizing",
+            "what if", "worst case", "paranoid"
+        ]
+        
+        # DEPRESSION markers
+        depression_patterns = [
+            "depressed", "sad all the time", "cry", "heavy", "dark",
+            "worthless", "failure", "hate myself", "nothing matters",
+            "grey", "fog", "hollow"
+        ]
+        
+        # POSITIVE MOTIVATION markers
+        positive_patterns = [
+            "motivated", "accomplished", "proud", "progress", "better",
+            "cleaned", "organized", "productive", "energy", "lighter",
+            "refreshed", "hopeful", "excited", "grateful", "happy"
+        ]
+        
+        # MASKING / PRETENDING markers
+        masking_patterns = [
+            "pretend", "act like", "smile so", "hide", "don't want to bother",
+            "burden", "fake it", "put on a face"
+        ]
+        
+        # Initialize
         emotions = []
         sentiment_score = 0
+        crisis_level = 0
         
-        for keyword, emotion in negative_keywords.items():
-            if keyword in text_lower:
-                emotions.append(emotion)
-                sentiment_score -= 1
-        
-        for keyword, emotion in positive_keywords.items():
-            if keyword in text_lower:
-                emotions.append(emotion)
-                sentiment_score += 1
-        
-        # Determine sentiment
-        if sentiment_score > 0:
-            sentiment = 'positive'
-        elif sentiment_score < 0:
-            sentiment = 'negative'
-        else:
-            sentiment = 'neutral'
-        
-        # Determine stress level
-        stress_level = 'low'
-        for keyword in high_stress_keywords:
-            if keyword in text_lower:
-                stress_level = 'high'
+        # CRISIS ANALYSIS
+        for phrase in explicit_crisis:
+            if phrase in text_lower:
+                emotions.append('crisis')
+                crisis_level = 3
+                sentiment_score -= 5
                 break
         
-        if stress_level == 'low':
-            for keyword in medium_stress_keywords:
-                if keyword in text_lower:
-                    stress_level = 'medium'
+        if crisis_level == 0:
+            for phrase in implicit_crisis:
+                if phrase in text_lower:
+                    emotions.append('hopelessness')
+                    crisis_level = 2
+                    sentiment_score -= 3
                     break
         
-        # Default emotions if none detected
+        # LONELINESS DETECTION
+        loneliness_score = sum(1 for p in loneliness_patterns if p in text_lower)
+        if loneliness_score >= 2:
+            emotions.append('loneliness')
+            sentiment_score -= 2
+        elif loneliness_score == 1:
+            emotions.append('isolation')
+            sentiment_score -= 1
+        
+        # MASKING DETECTION
+        masking_score = sum(1 for p in masking_patterns if p in text_lower)
+        if masking_score > 0:
+            emotions.append('emotional-masking')
+            sentiment_score -= 1
+        
+        # HOPELESSNESS
+        if any(p in text_lower for p in hopelessness_patterns):
+            if 'hopelessness' not in emotions:
+                emotions.append('hopelessness')
+            sentiment_score -= 2
+        
+        # BURNOUT / EXHAUSTION
+        burnout_score = sum(1 for p in burnout_patterns if p in text_lower)
+        if burnout_score >= 2:
+            emotions.append('burnout')
+            sentiment_score -= 2
+        elif burnout_score == 1:
+            emotions.append('exhaustion')
+            sentiment_score -= 1
+        
+        # OVERWHELM
+        if any(p in text_lower for p in overwhelm_patterns):
+            emotions.append('overwhelm')
+            sentiment_score -= 2
+        
+        # ANXIETY
+        anxiety_score = sum(1 for p in anxiety_patterns if p in text_lower)
+        if anxiety_score >= 2:
+            emotions.append('anxiety')
+            sentiment_score -= 1
+        elif anxiety_score == 1:
+            emotions.append('worry')
+            sentiment_score -= 0.5
+        
+        # DEPRESSION
+        if any(p in text_lower for p in depression_patterns):
+            emotions.append('sadness')
+            sentiment_score -= 1
+        
+        # POSITIVE EMOTIONS
+        positive_score = sum(1 for p in positive_patterns if p in text_lower)
+        if positive_score >= 2:
+            emotions.extend(['motivation', 'pride'])
+            sentiment_score += 3
+        elif positive_score == 1:
+            emotions.append('positivity')
+            sentiment_score += 1
+        
+        # DETERMINE SENTIMENT
+        if sentiment_score >= 2:
+            sentiment = 'positive'
+        elif sentiment_score <= -2:
+            sentiment = 'negative'
+        else:
+            # Context check - if negative emotions but weak signal
+            if any(e in emotions for e in ['loneliness', 'isolation', 'hopelessness', 
+                                           'burnout', 'overwhelm', 'crisis']):
+                sentiment = 'negative'
+            elif any(e in emotions for e in ['motivation', 'pride', 'positivity']):
+                sentiment = 'positive'
+            else:
+                sentiment = 'neutral'
+        
+        # DETERMINE STRESS LEVEL
+        if crisis_level >= 2:
+            stress_level = 'high'
+        elif any(e in emotions for e in ['crisis', 'hopelessness', 'overwhelm', 'burnout']):
+            stress_level = 'high'
+        elif any(e in emotions for e in ['anxiety', 'loneliness', 'exhaustion', 'emotional-masking']):
+            stress_level = 'medium'
+        elif sentiment == 'negative':
+            stress_level = 'medium'
+        else:
+            stress_level = 'low'
+        
+        # CLEAN UP EMOTIONS - remove generic ones if specific exist
         if not emotions:
             if sentiment == 'negative':
-                emotions = ['concerned']
+                emotions = ['concern', 'unease']
             elif sentiment == 'positive':
-                emotions = ['content']
+                emotions = ['contentment']
             else:
                 emotions = ['neutral']
+        
+        # Remove duplicates and limit to 4
+        emotions = list(dict.fromkeys(emotions))[:4]
         
         return {
             'sentiment': sentiment,
             'stress_level': stress_level,
-            'emotions': list(set(emotions))[:3]  # Max 3 emotions
+            'emotions': emotions
         }
     
     def generate_supportive_message(self, user_input: str, analysis: dict) -> str:
@@ -212,7 +326,7 @@ class GeminiClient:
     
     def _rule_based_message(self, user_input: str, analysis: dict) -> str:
         """
-        Generate supportive message using rules when API unavailable
+        Generate contextual supportive message based on deep emotional analysis
         """
         sentiment = analysis.get('sentiment', 'neutral')
         stress_level = analysis.get('stress_level', 'medium')
@@ -220,69 +334,139 @@ class GeminiClient:
         
         text_lower = user_input.lower()
         
-        # Crisis detection
-        crisis_keywords = ['suicidal', 'suicide', 'kill myself', 'end it', 'harm myself']
-        if any(keyword in text_lower for keyword in crisis_keywords):
+        # CRISIS RESPONSE
+        crisis_keywords = ['suicidal', 'suicide', 'kill myself', 'end it', 'harm myself',
+                          'want to die', 'better off dead', 'end my life']
+        implicit_crisis = ["don't see the point", "no point", "pointless", 
+                          "tired of existing", "fading"]
+        
+        if any(k in text_lower for k in crisis_keywords):
             return ("I'm deeply concerned about what you're sharing. Please reach out to a crisis helpline immediately: "
                    "National Suicide Prevention Lifeline: 988 or 1-800-273-8255. You don't have to face this alone - "
                    "professional help is available 24/7.")
         
-        # High stress
-        if stress_level == 'high':
-            messages = [
-                "I can sense you're going through a really difficult time right now. It's completely understandable to feel overwhelmed.",
-                "What you're experiencing sounds incredibly challenging. Remember, it's okay to ask for help and take things one moment at a time.",
-                "I hear how much you're struggling right now. Your feelings are valid, and there are ways to work through this together."
+        if any(k in text_lower for k in implicit_crisis):
+            return ("What you're describing sounds like you're carrying a very heavy emotional weight. "
+                   "These feelings of hopelessness are serious, and I want you to know help is available. "
+                   "Please consider reaching out to 988 or 1-800-273-8255 to talk with someone who can provide support right now.")
+        
+        # LONELINESS / ISOLATION / MASKING
+        if any(e in emotions for e in ['loneliness', 'isolation', 'emotional-masking']):
+            loneliness_responses = [
+                "Feeling invisible even when surrounded by people is incredibly painful. That emotional loneliness you're describing is real and valid, not something you're imagining.",
+                "It takes courage to admit you're pretending to be fine. Your feelings matter, and reaching out like this shows strength, not burden.",
+                "The kind of isolation you're feeling - where you're physically present but emotionally disconnected - is one of the hardest experiences to endure. You deserve to be seen and heard."
             ]
             import random
-            return random.choice(messages)
+            return random.choice(loneliness_responses)
         
-        # Negative sentiment
-        if sentiment == 'negative':
-            if 'sadness' in emotions or 'depression' in emotions or 'loneliness' in emotions:
-                return "I'm here with you. These feelings of sadness are difficult, but they won't last forever. Let's explore some gentle techniques that might help."
-            elif 'anxiety' in emotions or 'worry' in emotions:
-                return "Anxiety can feel overwhelming, but you're taking a positive step by reaching out. Let's work on some calming strategies together."
-            elif 'anger' in emotions or 'frustration' in emotions:
-                return "It's okay to feel frustrated or angry. These emotions are valid. Let's find healthy ways to process what you're experiencing."
-            else:
-                return "I hear that you're going through a tough time. You're not alone in this, and there are strategies that can help."
+        # HOPELESSNESS (non-crisis)
+        if 'hopelessness' in emotions:
+            return ("When everything feels pointless, it's hard to see a way forward. That heaviness you're feeling is real. "
+                   "Small steps matter right now - even reaching out like this. Let's focus on grounding techniques that might help.")
         
-        # Positive sentiment
-        if sentiment == 'positive':
-            return "It's wonderful to hear you're feeling positive! Let's build on this momentum with some practices to maintain your well-being."
+        # BURNOUT / EXHAUSTION
+        if any(e in emotions for e in ['burnout', 'exhaustion']):
+            burnout_responses = [
+                "That deep exhaustion that sleep can't fix is a sign of emotional burnout, not weakness. Your mind and body are signaling they need different kinds of rest.",
+                "When you're tired in a way that rest doesn't help, it's often emotional depletion. This isn't about pushing through - it's about gentle recovery and pacing.",
+                "The exhaustion you're describing goes beyond physical tiredness. It sounds like you're emotionally drained, which needs compassionate self-care and realistic expectations."
+            ]
+            import random
+            return random.choice(burnout_responses)
         
-        # Neutral/default
-        return "I'm here to support you. Let's explore some techniques that can help you build resilience and manage stress."
+        # OVERWHELM
+        if 'overwhelm' in emotions:
+            overwhelm_responses = [
+                "Feeling like you're falling behind in everything can create a paralyzing sense of overwhelm. Let's break things down into one small manageable step.",
+                "When everything feels like too much at once, it's okay to slow down and focus on just the next breath, the next hour. You don't have to fix everything today.",
+                "That drowning sensation you're experiencing is overwhelm flooding your system. Grounding techniques can help bring you back to the present moment."
+            ]
+            import random
+            return random.choice(overwhelm_responses)
+        
+        # ANXIETY
+        if any(e in emotions for e in ['anxiety', 'worry', 'panic']):
+            return ("Anxiety can feel like your mind is racing ahead to every worst-case scenario. Let's work on grounding you back in this moment, where you're safe right now.")
+        
+        # DEPRESSION / SADNESS
+        if any(e in emotions for e in ['sadness', 'depression']):
+            return ("The sadness you're carrying is real and heavy. You don't have to 'snap out of it' or think positive - sometimes we need to acknowledge the pain before we can move through it gently.")
+        
+        # POSITIVE MOTIVATION
+        if any(e in emotions for e in ['motivation', 'pride', 'positivity']):
+            positive_responses = [
+                "That sense of accomplishment and lighter energy you're feeling is wonderful! Let's build on this momentum with practices that maintain and grow this positive space.",
+                "It's great to hear you're feeling motivated and productive! This energy is valuable - let's talk about strategies to sustain it without burning out.",
+                "The pride and progress you're experiencing shows your resilience is working. Let's reinforce these positive patterns so they become more consistent."
+            ]
+            import random
+            return random.choice(positive_responses)
+        
+        # HIGH STRESS (general)
+        if stress_level == 'high':
+            return ("You're carrying a significant emotional load right now. It's completely valid to feel overwhelmed. Let's focus on immediate grounding and safety-first strategies.")
+        
+        # MEDIUM STRESS
+        if stress_level == 'medium':
+            return ("I can sense you're dealing with some challenging emotions. You're not alone in this - let's explore some techniques that can help you navigate what you're feeling.")
+        
+        # NEUTRAL / DEFAULT
+        return "I'm here to support you. Let's work together to understand what you're experiencing and find strategies that fit your needs right now."
     
     def _build_analysis_prompt(self, user_input: str) -> str:
-        """Build prompt for emotional analysis"""
-        return f"""You are an empathetic mental wellness AI assistant. Analyze the following user input for emotional state and stress level.
+        """Build prompt for emotional analysis with enhanced specifications"""
+        return f"""You are an emotionally intelligent mental wellness AI assistant with deep understanding of human psychology.
+
+Your task: Analyze the user's message for emotional state, stress level, and underlying emotional patterns.
 
 User Input: "{user_input}"
 
-Provide your analysis in EXACTLY this format (one line each, no extra text):
+Analyze deeply, looking for:
+- Explicit emotions stated directly
+- Implicit emotions (tone, context, contradictions)
+- Physical symptoms mentioned (chest pressure, nausea, fatigue)
+- Behavioral patterns (avoidance, isolation, sleep issues)
+- Hidden cues (loneliness masked as independence, anxiety masked as humor)
+- Contradictions ("I'm fine" but describes crisis)
+- Risk indicators (hopelessness, self-harm thoughts, extreme statements)
+
+Provide your analysis in EXACTLY this format (one line each):
 SENTIMENT: [positive/neutral/negative]
 STRESS_LEVEL: [low/medium/high]
-EMOTIONS: [list 2-4 specific emotions separated by commas, e.g., anxiety, overwhelm, sadness]
+EMOTIONS: [2-4 specific emotions separated by commas - be precise: use anxiety not worry, overwhelm not stress, heartbreak not sadness when appropriate]
 
-Be precise and concise. Only output the three lines above, nothing else."""
+Be accurate and multi-dimensional. Consider emotional layers, not just keywords."""
 
     def _build_support_prompt(self, user_input: str, analysis: dict) -> str:
-        """Build prompt for supportive message"""
-        return f"""You are a compassionate mental wellness coach. The user shared: "{user_input}"
+        """Build prompt for supportive message with enhanced specifications"""
+        return f"""You are a compassionate mental wellness coach trained in evidence-based therapeutic communication.
 
-Analysis shows:
+User shared: "{user_input}"
+
+Emotional Analysis:
 - Sentiment: {analysis['sentiment']}
 - Stress Level: {analysis['stress_level']}
 - Emotions: {', '.join(analysis['emotions'])}
 
-Write ONE SHORT supportive message (2-3 sentences max) that:
-1. Validates their feelings
-2. Offers gentle encouragement
-3. Is warm and empathetic
+Generate ONE supportive response (2-3 sentences) that is:
+✓ Warm, conversational, and human-like
+✓ Direct but gentle
+✓ Validating without toxic positivity (avoid "just think positive")
+✓ Grounding and safety-oriented
+✓ Uses simple psychological strategies: validation, normalization, gentle guidance
 
-Keep it conversational and natural. Do not give medical advice."""
+✗ Never diagnose or label as mental illness
+✗ Never make medical claims
+✗ Never replace professional therapy
+✗ Never dismiss or minimize feelings
+
+If high risk detected (self-harm, suicidal thoughts, extreme hopelessness):
+- Respond with compassion
+- Acknowledge the severity
+- Urgently direct to crisis resources (988, 1-800-273-8255)
+
+Write naturally as if speaking to a friend who needs support."""
 
     def _parse_analysis_response(self, response_text: str) -> dict:
         """

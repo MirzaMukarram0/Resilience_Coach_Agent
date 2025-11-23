@@ -146,7 +146,7 @@ class RecommendationEngine:
     
     def _select_strategy(self, sentiment: str, stress_level: str, emotions: list) -> str:
         """
-        Select most appropriate strategy based on user's state
+        Select most appropriate strategy based on deep emotional analysis
         
         Args:
             sentiment: User's sentiment
@@ -158,29 +158,54 @@ class RecommendationEngine:
         """
         emotions_str = ' '.join(emotions).lower()
         
-        # High stress or anxiety -> Breathing or grounding
-        if stress_level == 'high' or any(word in emotions_str for word in ['anxiety', 'panic', 'overwhelm', 'stressed']):
+        # CRISIS / HOPELESSNESS -> Grounding (bring to present)
+        if any(word in emotions_str for word in ['crisis', 'hopelessness', 'suicidal']):
+            return 'grounding_technique'
+        
+        # LONELINESS / ISOLATION -> Social connection
+        if any(word in emotions_str for word in ['loneliness', 'isolation', 'invisible', 'alone', 'masking']):
+            return 'social_connection'
+        
+        # BURNOUT / EXHAUSTION -> Progressive relaxation (physical rest)
+        if any(word in emotions_str for word in ['burnout', 'exhaustion', 'drained', 'empty', 'numb']):
+            return 'progressive_relaxation'
+        
+        # OVERWHELM -> Grounding (reduce stimulation)
+        if any(word in emotions_str for word in ['overwhelm', 'drowning', 'suffocating', 'too much']):
+            return 'grounding_technique'
+        
+        # ANXIETY / PANIC -> Breathing (calm nervous system)
+        if any(word in emotions_str for word in ['anxiety', 'panic', 'racing', 'scared', 'terrified']):
+            return 'breathing_exercise'
+        
+        # DEPRESSION / SADNESS (not loneliness) -> Affirmations or gentle activity
+        if any(word in emotions_str for word in ['depression', 'sadness', 'hopeless', 'worthless', 'dark']):
+            # Vary to prevent repetition
+            return random.choice(['positive_affirmations', 'physical_activity'])
+        
+        # ANGER / FRUSTRATION -> Physical activity (release)
+        if any(word in emotions_str for word in ['anger', 'frustrated', 'irritated', 'annoyed', 'rage']):
+            return 'physical_activity'
+        
+        # WORRY / RUMINATION -> Journaling (externalize thoughts)
+        if any(word in emotions_str for word in ['worry', 'ruminating', 'confused', 'uncertain', 'thinking']):
+            return 'journaling'
+        
+        # POSITIVE MOTIVATION -> Journaling (reinforce gains) or affirmations
+        if any(word in emotions_str for word in ['motivation', 'pride', 'progress', 'accomplished', 'productive']):
+            return random.choice(['journaling', 'positive_affirmations'])
+        
+        # HIGH STRESS (general) -> Breathing or grounding
+        if stress_level == 'high':
             return random.choice(['breathing_exercise', 'grounding_technique'])
         
-        # Sadness or depression indicators -> Affirmations or social connection
-        if any(word in emotions_str for word in ['sad', 'depressed', 'lonely', 'hopeless', 'down']):
-            return random.choice(['positive_affirmations', 'social_connection'])
-        
-        # Anger or frustration -> Physical activity or progressive relaxation
-        if any(word in emotions_str for word in ['angry', 'frustrated', 'irritated', 'annoyed']):
-            return random.choice(['physical_activity', 'progressive_relaxation'])
-        
-        # Rumination or worry -> Journaling or meditation
-        if any(word in emotions_str for word in ['worried', 'thinking', 'ruminating', 'confused']):
-            return random.choice(['journaling', 'mindful_meditation'])
-        
-        # Medium stress -> Meditation or relaxation
+        # MEDIUM STRESS -> Meditation or relaxation
         if stress_level == 'medium':
             return random.choice(['mindful_meditation', 'progressive_relaxation'])
         
-        # Low stress or positive sentiment -> Maintain wellness
+        # LOW STRESS / POSITIVE -> Maintain wellness
         if stress_level == 'low' or sentiment == 'positive':
-            return random.choice(['mindful_meditation', 'positive_affirmations', 'journaling'])
+            return random.choice(['mindful_meditation', 'journaling', 'positive_affirmations'])
         
         # Default fallback
         return 'breathing_exercise'

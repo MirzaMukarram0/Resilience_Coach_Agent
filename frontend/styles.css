@@ -223,10 +223,14 @@ body {
 
 .message.user {
     justify-content: flex-end;
+    margin-left: auto;
+    padding-right: 0;
 }
 
 .message.agent {
     justify-content: flex-start;
+    margin-right: auto;
+    padding-left: 0;
 }
 
 .message-content {
