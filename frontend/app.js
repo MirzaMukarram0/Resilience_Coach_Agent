@@ -5,8 +5,13 @@ let healthCheckInterval = null;
 
 // Initialize app
 window.addEventListener('DOMContentLoaded', () => {
-    checkHealth();
-    healthCheckInterval = setInterval(checkHealth, 30000); // Check every 30 seconds
+    updateStatus('connecting', 'Connecting...');
+    
+    // Try initial connection with retry
+    setTimeout(() => {
+        checkHealth();
+        healthCheckInterval = setInterval(checkHealth, 30000); // Check every 30 seconds
+    }, 1000);
     
     const userInput = document.getElementById('userInput');
     userInput.addEventListener('input', updateCharCount);
@@ -22,12 +27,25 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Health check
 function checkHealth() {
-    fetch(`${API_URL}/health`)
-        .then(response => response.json())
+    fetch(`${API_URL}/health`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+        }
+    })
+        .then(response => {
+            console.log('Health check response:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Backend connected:', data);
             updateStatus('connected', 'Connected');
         })
         .catch(error => {
+            console.error('Health check failed:', error);
             updateStatus('error', 'Disconnected');
         });
 }
@@ -72,11 +90,14 @@ function sendMessage() {
     input.value = '';
     updateCharCount();
     
+    console.log('Sending message:', message);
+    
     // Call API
     fetch(`${API_URL}/resilience`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
         body: JSON.stringify({
             agent: 'resilience_coach',
@@ -88,12 +109,16 @@ function sendMessage() {
         })
     })
     .then(response => {
+        console.log('Response status:', response.status);
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            return response.text().then(text => {
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            });
         }
         return response.json();
     })
     .then(data => {
+        console.log('Response data:', data);
         if (data.status === 'success') {
             displayAgentResponse(data);
         } else {
@@ -102,7 +127,7 @@ function sendMessage() {
     })
     .catch(error => {
         console.error('Error:', error);
-        displayErrorMessage();
+        displayErrorMessage(error.message);
     })
     .finally(() => {
         isProcessing = false;
@@ -136,29 +161,91 @@ function displayAgentResponse(data) {
     
     // Main message
     if (data.message) {
-        const messageText = document.createElement('p');
-        messageText.textContent = data.message;
-        messageText.style.marginBottom = '12px';
-        contentDiv.appendChild(messageText);
+        // Check for crisis keywords
+        const isCrisis = data.message.includes('crisis') || 
+                        data.message.includes('Suicide Prevention') || 
+                        data.message.includes('988') ||
+                        data.message.includes('1-800-273-8255');
+        
+        if (isCrisis) {
+            // Create crisis alert box
+            const crisisDiv = document.createElement('div');
+            crisisDiv.className = 'crisis-alert';
+            
+            const crisisTitle = document.createElement('h4');
+            crisisTitle.textContent = '🚨 Crisis Support Available';
+            crisisDiv.appendChild(crisisTitle);
+            
+            const crisisText = document.createElement('p');
+            crisisText.textContent = data.message;
+            crisisDiv.appendChild(crisisText);
+            
+            // Add hotline info prominently
+            const hotlineDiv = document.createElement('div');
+            hotlineDiv.className = 'crisis-hotline';
+            hotlineDiv.innerHTML = '📞 <strong>Emergency Helplines:</strong><br>988 (Suicide & Crisis Lifeline)<br>1-800-273-8255 (24/7 Support)';
+            crisisDiv.appendChild(hotlineDiv);
+            
+            contentDiv.appendChild(crisisDiv);
+        } else {
+            const messageText = document.createElement('p');
+            messageText.textContent = data.message;
+            messageText.style.marginBottom = '12px';
+            contentDiv.appendChild(messageText);
+        }
     }
+    
+    // Check for crisis in message for analysis styling
+    const isCrisis = data.message && (data.message.includes('crisis') || data.message.includes('Suicide Prevention') || data.message.includes('988'));
     
     // Analysis section
     if (data.analysis) {
         const analysisDiv = document.createElement('div');
-        analysisDiv.className = 'analysis-section';
+        const sentiment = data.analysis.sentiment || 'neutral';
+        analysisDiv.className = `analysis-section ${sentiment}`;
+        
+        if (isCrisis) {
+            analysisDiv.className = 'analysis-section crisis';
+        }
         
         const title = document.createElement('h4');
-        title.textContent = 'Emotional Analysis';
+        title.textContent = isCrisis ? '⚠️ Crisis Detected' : 'Emotional Analysis';
         analysisDiv.appendChild(title);
         
         const content = document.createElement('div');
         content.className = 'analysis-content';
-        content.innerHTML = `
-            <p><strong>Sentiment:</strong> ${capitalizeFirst(data.analysis.sentiment || 'N/A')}</p>
-            <p><strong>Stress Level:</strong> ${capitalizeFirst(data.analysis.stress_level || 'N/A')}</p>
-            ${data.analysis.emotions && data.analysis.emotions.length > 0 ? 
-                `<p><strong>Emotions:</strong> ${data.analysis.emotions.map(capitalizeFirst).join(', ')}</p>` : ''}
-        `;
+        
+        // Sentiment with badge
+        const sentimentP = document.createElement('p');
+        sentimentP.innerHTML = `<strong>Sentiment:</strong><span class="sentiment-badge ${sentiment}">${capitalizeFirst(sentiment)}</span>`;
+        content.appendChild(sentimentP);
+        
+        // Stress level with indicator
+        const stressLevel = data.analysis.stress_level || 'medium';
+        const stressP = document.createElement('div');
+        stressP.className = 'stress-indicator';
+        stressP.innerHTML = `<strong>Stress Level:</strong><span class="stress-level ${stressLevel}">${capitalizeFirst(stressLevel)}</span>`;
+        content.appendChild(stressP);
+        
+        // Emotions as tags
+        if (data.analysis.emotions && data.analysis.emotions.length > 0) {
+            const emotionsLabel = document.createElement('p');
+            emotionsLabel.innerHTML = '<strong>Detected Emotions:</strong>';
+            emotionsLabel.style.marginTop = '8px';
+            emotionsLabel.style.marginBottom = '4px';
+            content.appendChild(emotionsLabel);
+            
+            const emotionsList = document.createElement('div');
+            emotionsList.className = 'emotions-list';
+            data.analysis.emotions.forEach(emotion => {
+                const tag = document.createElement('span');
+                tag.className = 'emotion-tag';
+                tag.textContent = capitalizeFirst(emotion);
+                emotionsList.appendChild(tag);
+            });
+            content.appendChild(emotionsList);
+        }
+        
         analysisDiv.appendChild(content);
         contentDiv.appendChild(analysisDiv);
     }
@@ -200,14 +287,20 @@ function displayAgentResponse(data) {
     scrollToBottom();
 }
 
-function displayErrorMessage() {
+function displayErrorMessage(errorDetails) {
     const chatContainer = document.getElementById('chatContainer');
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message agent';
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = 'I apologize, but I encountered an issue processing your request. Please try again in a moment.';
+    
+    let errorMsg = 'I apologize, but I encountered an issue processing your request. Please try again in a moment.';
+    if (errorDetails) {
+        console.error('Error details:', errorDetails);
+    }
+    
+    contentDiv.textContent = errorMsg;
     
     messageDiv.appendChild(contentDiv);
     chatContainer.appendChild(messageDiv);
@@ -234,162 +327,3 @@ window.addEventListener('beforeunload', () => {
         clearInterval(healthCheckInterval);
     }
 });
-
-// Event Listeners
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-});
-
-// Send message to agent
-async function sendMessage() {
-    const message = userInput.value.trim();
-    
-    if (!message) return;
-    
-    // Disable input while processing
-    userInput.disabled = true;
-    sendBtn.disabled = true;
-    
-    // Display user message
-    addMessage(message, 'user');
-    userInput.value = '';
-    
-    // Show loading indicator
-    const loadingId = addLoadingMessage();
-    
-    try {
-        const response = await fetch(`${API_URL}/resilience`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                agent: 'resilience_coach',
-                input_text: message,
-                metadata: {
-                    user_id: 'web_user',
-                    language: 'en'
-                }
-            })
-        });
-        
-        const data = await response.json();
-        
-        // Remove loading indicator
-        removeLoadingMessage(loadingId);
-        
-        if (data.status === 'success') {
-            addAgentResponse(data);
-        } else {
-            addMessage(`Error: ${data.message}`, 'agent');
-        }
-        
-    } catch (error) {
-        removeLoadingMessage(loadingId);
-        addMessage(`Connection error: ${error.message}. Make sure the backend server is running.`, 'agent');
-    }
-    
-    // Re-enable input
-    userInput.disabled = false;
-    sendBtn.disabled = false;
-    userInput.focus();
-}
-
-// Add user or simple agent message
-function addMessage(text, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${sender}-message`;
-    messageDiv.textContent = text;
-    chatContainer.appendChild(messageDiv);
-    scrollToBottom();
-}
-
-// Add formatted agent response
-function addAgentResponse(data) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message agent-message';
-    
-    // Analysis section
-    if (data.analysis) {
-        const analysisDiv = document.createElement('div');
-        analysisDiv.className = 'analysis';
-        analysisDiv.innerHTML = `
-            <strong>📊 Analysis:</strong><br>
-            Sentiment: ${data.analysis.sentiment}<br>
-            Stress Level: ${data.analysis.stress_level}<br>
-            Emotions: ${data.analysis.emotions.join(', ')}
-        `;
-        messageDiv.appendChild(analysisDiv);
-    }
-    
-    // Supportive message
-    if (data.message) {
-        const supportDiv = document.createElement('p');
-        supportDiv.textContent = data.message;
-        supportDiv.style.margin = '10px 0';
-        messageDiv.appendChild(supportDiv);
-    }
-    
-    // Recommendation section
-    if (data.recommendation) {
-        const recDiv = document.createElement('div');
-        recDiv.className = 'recommendation';
-        
-        let stepsHtml = '<ol>';
-        data.recommendation.steps.forEach(step => {
-            stepsHtml += `<li>${step}</li>`;
-        });
-        stepsHtml += '</ol>';
-        
-        recDiv.innerHTML = `
-            <h4>💡 Recommended: ${data.recommendation.type.replace(/_/g, ' ')}</h4>
-            ${stepsHtml}
-        `;
-        messageDiv.appendChild(recDiv);
-    }
-    
-    chatContainer.appendChild(messageDiv);
-    scrollToBottom();
-}
-
-// Add loading indicator
-function addLoadingMessage() {
-    const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'message agent-message';
-    loadingDiv.id = 'loading-' + Date.now();
-    loadingDiv.innerHTML = '<div class="loading"></div> Analyzing...';
-    chatContainer.appendChild(loadingDiv);
-    scrollToBottom();
-    return loadingDiv.id;
-}
-
-// Remove loading indicator
-function removeLoadingMessage(id) {
-    const loadingDiv = document.getElementById(id);
-    if (loadingDiv) {
-        loadingDiv.remove();
-    }
-}
-
-// Scroll to bottom of chat
-function scrollToBottom() {
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-// Check backend health on load
-async function checkHealth() {
-    try {
-        const response = await fetch(`${API_URL}/health`);
-        const data = await response.json();
-        console.log('Backend status:', data);
-    } catch (error) {
-        console.error('Backend connection failed:', error);
-        addMessage('⚠️ Warning: Cannot connect to backend server. Please ensure it is running on port 5000.', 'agent');
-    }
-}
-
-// Initialize
-checkHealth();

@@ -62,6 +62,20 @@ copy .env.example .env
 
 ## 🎮 Usage
 
+### Quick Start (Recommended)
+Run everything with a single command:
+```bash
+python agent.py
+```
+This will:
+- Start the Flask backend on port 5000
+- Start the frontend server on port 8000
+- Automatically open the web interface in your browser
+
+Press `Ctrl+C` to stop all servers.
+
+### Manual Start (Alternative)
+
 1. **Run the Flask application**
 ```bash
 python -m backend.app
@@ -116,6 +130,7 @@ Resilience_Coach_Agent/
 │   ├── index.html            # Web interface
 │   ├── styles.css            # Styling
 │   └── app.js                # Frontend logic
+├── agent.py                  # Unified launcher
 ├── requirements.txt
 ├── .env.example
 └── README.md
