@@ -152,7 +152,7 @@ def resilience_endpoint():
         }), 500
 
 
-@api_bp.route('/', methods=['GET'])
+@api_bp.route('/api', methods=['GET'])
 def root():
     """Root endpoint with API information"""
     return jsonify({
@@ -160,6 +160,11 @@ def root():
         'version': Config.AGENT_VERSION,
         'status': 'running',
         'endpoints': {
+            'api_info': {
+                'path': '/api',
+                'method': 'GET',
+                'description': 'API information'
+            },
             'health': {
                 'path': '/health',
                 'method': 'GET',

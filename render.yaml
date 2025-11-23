@@ -3,7 +3,7 @@ services:
     name: resilience-coach-agent
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn "backend.app:create_app()"
+    startCommand: gunicorn backend.app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
