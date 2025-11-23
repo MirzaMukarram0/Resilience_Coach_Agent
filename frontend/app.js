@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:5000';
+// Use relative URL for API calls (same domain in production)
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : '';
 
 let isProcessing = false;
 let healthCheckInterval = null;

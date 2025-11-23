@@ -31,6 +31,8 @@ The Resilience Coach Agent is designed to help users manage stress, build emotio
 
 ## 🚀 Installation
 
+### Local Development
+
 1. **Clone the repository**
 ```bash
 git clone https://github.com/MirzaMukarram0/Resilience_Coach_Agent.git
@@ -56,9 +58,24 @@ pip install -r requirements.txt
 # Windows
 copy .env.example .env
 
+# Linux/Mac
+cp .env.example .env
+
 # Edit .env and add your Gemini API key
 # Get your key from: https://makersuite.google.com/app/apikey
 ```
+
+### 🌐 Production Deployment (Render)
+
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide**
+
+Quick steps:
+1. Push code to GitHub
+2. Create free account on [Render](https://render.com)
+3. Connect repository and deploy
+4. Add `GEMINI_API_KEY` environment variable
+
+Your app will be live at: `https://your-app-name.onrender.com`
 
 ## 🎮 Usage
 

@@ -29,6 +29,7 @@ venv.bak/
 
 # Environment Variables
 .env
+.env.local
 
 # IDE
 .vscode/
@@ -53,3 +54,6 @@ htmlcov/
 # Flask
 instance/
 .webassets-cache
+
+# Render
+.render/
