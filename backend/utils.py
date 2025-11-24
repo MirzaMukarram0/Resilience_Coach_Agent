@@ -153,8 +153,8 @@ class ResponseValidator:
     REQUIRED_ANALYSIS_FIELDS = ['sentiment', 'stress_level', 'emotions']
     REQUIRED_RECOMMENDATION_FIELDS = ['type', 'steps']
     
-    VALID_SENTIMENTS = ['positive', 'neutral', 'negative']
-    VALID_STRESS_LEVELS = ['low', 'medium', 'high']
+    VALID_SENTIMENTS = ['positive', 'neutral', 'negative', 'deeply_negative', 'error_quota_exceeded', 'error_api_failed']
+    VALID_STRESS_LEVELS = ['low', 'medium', 'high', 'crisis', 'api_unavailable']
     
     @classmethod
     def validate_response(cls, response: dict) -> Tuple[bool, dict, Optional[str]]:

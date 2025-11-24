@@ -200,6 +200,7 @@ function displayAgentResponse(data) {
     
     // Check for crisis in message for analysis styling
     const isCrisis = data.message && (data.message.includes('crisis') || data.message.includes('Suicide Prevention') || data.message.includes('988'));
+    const isApiError = data.analysis && (data.analysis.sentiment?.includes('error_') || data.analysis.stress_level === 'api_unavailable');
     
     // Analysis section
     if (data.analysis) {
@@ -209,10 +210,12 @@ function displayAgentResponse(data) {
         
         if (isCrisis) {
             analysisDiv.className = 'analysis-section crisis';
+        } else if (isApiError) {
+            analysisDiv.className = 'analysis-section api-error';
         }
         
         const title = document.createElement('h4');
-        title.textContent = isCrisis ? '⚠️ Crisis Detected' : 'Emotional Analysis';
+        title.textContent = isCrisis ? '⚠️ Crisis Detected' : (isApiError ? '⚠️ AI Service Status' : 'Emotional Analysis');
         analysisDiv.appendChild(title);
         
         const content = document.createElement('div');
@@ -220,14 +223,16 @@ function displayAgentResponse(data) {
         
         // Sentiment with badge
         const sentimentP = document.createElement('p');
-        sentimentP.innerHTML = `<strong>Sentiment:</strong><span class="sentiment-badge ${sentiment}">${capitalizeFirst(sentiment)}</span>`;
+        const sentimentDisplay = isApiError ? 'API Error' : capitalizeFirst(sentiment.replace('error_', '').replace('_', ' '));
+        sentimentP.innerHTML = `<strong>Sentiment:</strong><span class="sentiment-badge ${sentiment}">${sentimentDisplay}</span>`;
         content.appendChild(sentimentP);
         
         // Stress level with indicator
         const stressLevel = data.analysis.stress_level || 'medium';
         const stressP = document.createElement('div');
         stressP.className = 'stress-indicator';
-        stressP.innerHTML = `<strong>Stress Level:</strong><span class="stress-level ${stressLevel}">${capitalizeFirst(stressLevel)}</span>`;
+        const stressDisplay = isApiError ? 'API Unavailable' : capitalizeFirst(stressLevel.replace('_', ' '));
+        stressP.innerHTML = `<strong>Stress Level:</strong><span class="stress-level ${stressLevel}">${stressDisplay}</span>`;
         content.appendChild(stressP);
         
         // Emotions as tags

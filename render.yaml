@@ -11,5 +11,9 @@ services:
         sync: false
       - key: PORT
         value: 10000
+      - key: DEBUG
+        value: false
     healthCheckPath: /health
     autoDeploy: true
+    # Note: ChromaDB will create chroma_db/ directory automatically
+    # Persistent storage included in Render's filesystem

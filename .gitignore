@@ -57,3 +57,13 @@ instance/
 
 # Render
 .render/
+
+# ChromaDB - Database files 
+# Note: Exclude persistent database files but keep directory structure
+chroma_db/*.sqlite3
+chroma_db/*.sqlite3-wal
+chroma_db/*.sqlite3-shm
+chroma_db/chroma.sqlite3*
+
+# But keep the directory for deployment
+!chroma_db/.gitkeep

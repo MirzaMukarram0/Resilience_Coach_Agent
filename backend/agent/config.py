@@ -23,7 +23,8 @@ class Config:
     MAX_REQUESTS_PER_MINUTE = 15  # Match Gemini free tier limit
     
     # Model Settings
-    MODEL_NAME = 'gemini-2.0-flash-exp'  # Better rate limits (15 req/min vs 10)
+    MODEL_NAME = 'models/gemini-2.0-flash-lite'  # Lighter model with better quota limits
+    EMBEDDING_MODEL = 'models/embedding-001'  # For ChromaDB embeddings
     MAX_TOKENS = 500
     TEMPERATURE = 0.7
     
