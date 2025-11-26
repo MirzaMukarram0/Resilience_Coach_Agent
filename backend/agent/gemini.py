@@ -19,6 +19,11 @@ class GeminiClient:
         if not Config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY is required")
         
+        self._configure_client()
+        logger.info(f"Pure Gemini client initialized: {Config.MODEL_NAME}")
+
+    def _configure_client(self):
+        """Configure or reconfigure Gemini client (called on init and reconnect)"""
         genai.configure(api_key=Config.GEMINI_API_KEY)
         
         # Use stable model with better quota
@@ -30,7 +35,21 @@ class GeminiClient:
             }
         )
         
-        logger.info(f"Pure Gemini client initialized: {Config.MODEL_NAME}")
+    def reconnect(self):
+        """Reconnect to Gemini API (fixes stale connections after sleep)"""
+        try:
+            logger.info("Reconnecting to Gemini API...")
+            self._configure_client()
+            # Test connection with a simple request
+            test_response = self.model.generate_content(
+                "Hello",
+                generation_config={'max_output_tokens': 5}
+            )
+            logger.info("Gemini API reconnection successful")
+            return True
+        except Exception as e:
+            logger.error(f"Gemini reconnection failed: {e}")
+            return False
 
     def analyze_emotion_with_context(
         self,
@@ -60,25 +79,28 @@ USER MESSAGE: "{input_text}"{context_info}
 
 Analyze considering:
 - Explicit emotions stated
-- Hidden emotional cues (tone, contradictions, subtext)
-- Stress indicators (overwhelm, pressure, exhaustion)
-- Physical symptoms mentioned
-- Behavioral patterns
-- Crisis risk factors (hopelessness, suicidal ideation, self-harm)
-- Emotional masking ("I'm fine" while showing distress)
+- Hidden emotional cues (tone, contradictions)
+- Stress indicators (overwhelm, exhaustion)
+- Crisis risk factors (hopelessness, suicidal ideation)
 
 Respond in EXACTLY this JSON format:
 {{
   "sentiment": "positive/neutral/negative/deeply_negative",
   "stress_level": "low/medium/high/crisis",
-  "emotions": ["specific_emotion1", "specific_emotion2", "specific_emotion3"],
+  "emotions": ["emotion1", "emotion2", "emotion3"],
   "confidence": 0.85,
-  "reasoning": "Brief explanation of your analysis"
+  "reasoning": "Brief 1-sentence explanation"
 }}
 
-Be accurate. Detect hidden emotions behind words like "I'm okay" or "just tired"."""
+Be accurate and concise."""
 
-            response = self.model.generate_content(prompt)
+            response = self.model.generate_content(
+                prompt,
+                generation_config={
+                    'max_output_tokens': 200,  # Limit response length
+                    'temperature': 0.7
+                }
+            )
             
             # Parse JSON response
             response_text = response.text.strip()
@@ -172,7 +194,7 @@ Respond with ONLY a decimal number 0.0-1.0"""
         memory_context: list = None,
         emotional_patterns: dict = None
     ) -> str:
-        """Generate reasoning explanation using Gemini"""
+        """Generate reasoning explanation using Gemini with timeout protection"""
         try:
             context_summary = ""
             if memory_context:
@@ -181,21 +203,28 @@ Respond with ONLY a decimal number 0.0-1.0"""
                 patterns = ', '.join(emotional_patterns.get('recurring_emotions', [])[:2])
                 context_summary += f"User often experiences {patterns}. "
 
-            prompt = f"""Explain in 1-2 sentences why this emotional analysis was reached:
+            prompt = f"""In 1 sentence, explain why this analysis was reached:
 
 USER: "{input_text}"
 ANALYSIS: {analysis.get('sentiment')} sentiment, {analysis.get('stress_level')} stress
-EMOTIONS: {', '.join(analysis.get('emotions', []))}
-CONTEXT: {context_summary}
+EMOTIONS: {', '.join(analysis.get('emotions', [])[:3])}
 
-Provide brief, clear reasoning for this analysis."""
+Brief reasoning:"""
 
-            response = self.model.generate_content(prompt)
+            # Use shorter timeout for reasoning to prevent worker timeout
+            response = self.model.generate_content(
+                prompt,
+                generation_config={
+                    'max_output_tokens': 100,  # Keep reasoning brief
+                    'temperature': 0.5  # More deterministic = faster
+                }
+            )
             return response.text.strip()
             
         except Exception as e:
             logger.error(f"Reasoning generation failed: {e}")
-            return analysis.get('reasoning', 'Analysis based on emotional language patterns.')
+            # Return analysis reasoning if available (already generated during analysis)
+            return analysis.get('reasoning', 'Analysis based on emotional patterns in message.')
 
     def generate_recommendation(
         self,

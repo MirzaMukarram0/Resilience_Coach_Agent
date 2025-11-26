@@ -3,7 +3,7 @@ services:
     name: resilience-coach-agent
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn backend.app:app
+    startCommand: gunicorn backend.app:app --timeout 120 --workers 2
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
@@ -17,3 +17,4 @@ services:
     autoDeploy: true
     # Note: ChromaDB will create chroma_db/ directory automatically
     # Persistent storage included in Render's filesystem
+    # Updated: 120s timeout, 2 workers for better performance

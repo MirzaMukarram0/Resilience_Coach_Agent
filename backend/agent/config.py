@@ -25,13 +25,13 @@ class Config:
     # Model Settings
     MODEL_NAME = 'models/gemini-2.0-flash-lite'  # Lighter model with better quota limits
     EMBEDDING_MODEL = 'models/embedding-001'  # For ChromaDB embeddings
-    MAX_TOKENS = 500
+    MAX_TOKENS = 300  # Reduced for faster responses
     TEMPERATURE = 0.7
     
     # Rate Limiting Settings
-    API_RETRY_ATTEMPTS = 3
-    API_RETRY_DELAY = 2  # seconds
-    REQUEST_TIMEOUT = 30  # seconds
+    API_RETRY_ATTEMPTS = 2  # Reduced retries for faster failures
+    API_RETRY_DELAY = 1  # seconds - reduced from 2
+    REQUEST_TIMEOUT = 15  # seconds - reduced from 30 for faster API calls
     
     @staticmethod
     def validate():

@@ -39,13 +39,27 @@ def check_rate_limit(user_id: str) -> bool:
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for supervisor integration"""
-    return jsonify({
-        'status': 'ok',
-        'agent': 'resilience_coach',
-        'version': Config.AGENT_VERSION,
-        'message': 'Resilience Coach Agent is running'
-    }), 200
+    """Health check endpoint - also reconnects Gemini after sleep"""
+    try:
+        # Test Gemini connection after service wakes up
+        workflow.gemini_client.reconnect()
+        
+        return jsonify({
+            'status': 'ok',
+            'agent': 'resilience_coach',
+            'version': Config.AGENT_VERSION,
+            'message': 'Resilience Coach Agent is running',
+            'gemini_connected': True
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'degraded',
+            'agent': 'resilience_coach',
+            'version': Config.AGENT_VERSION,
+            'message': 'Service running but Gemini connection issues',
+            'gemini_connected': False
+        }), 200
 
 
 @api_bp.route('/resilience', methods=['POST'])

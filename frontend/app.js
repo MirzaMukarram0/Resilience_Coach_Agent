@@ -13,7 +13,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // Try initial connection with retry
     setTimeout(() => {
         checkHealth();
-        healthCheckInterval = setInterval(checkHealth, 30000); // Check every 30 seconds
+        // Check health every 5 minutes to keep service alive
+        healthCheckInterval = setInterval(checkHealth, 5 * 60 * 1000);
+        
+        // Wake up service on first page load
+        wakeUpService();
     }, 1000);
     
     const userInput = document.getElementById('userInput');
@@ -27,6 +31,33 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Wake up service after sleep (Render free tier goes to sleep after 15 min)
+function wakeUpService() {
+    console.log('Waking up service and reconnecting Gemini API...');
+    updateStatus('connecting', 'Waking up...');
+    
+    // Hit health endpoint to trigger reconnection
+    fetch(`${API_URL}/health`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Service wake-up response:', data);
+            if (data.gemini_connected) {
+                updateStatus('connected', 'Connected');
+            } else {
+                updateStatus('error', 'API Issue');
+            }
+        })
+        .catch(error => {
+            console.error('Wake-up failed:', error);
+            updateStatus('error', 'Disconnected');
+        });
+}
 
 // Health check
 function checkHealth() {
@@ -45,7 +76,11 @@ function checkHealth() {
         })
         .then(data => {
             console.log('Backend connected:', data);
-            updateStatus('connected', 'Connected');
+            if (data.gemini_connected) {
+                updateStatus('connected', 'Connected');
+            } else {
+                updateStatus('error', 'API Issue');
+            }
         })
         .catch(error => {
             console.error('Health check failed:', error);
@@ -75,7 +110,7 @@ function toggleSendButton() {
     sendButton.disabled = message.length < 3 || isProcessing;
 }
 
-function sendMessage() {
+function sendMessage(retryCount = 0) {
     const input = document.getElementById('userInput');
     const message = input.value.trim();
     
@@ -88,12 +123,14 @@ function sendMessage() {
     sendButton.disabled = true;
     buttonText.innerHTML = '<span class="loading-spinner"></span>';
     
-    // Display user message
-    displayMessage(message, 'user');
-    input.value = '';
-    updateCharCount();
+    // Display user message (only on first attempt)
+    if (retryCount === 0) {
+        displayMessage(message, 'user');
+        input.value = '';
+        updateCharCount();
+    }
     
-    console.log('Sending message:', message);
+    console.log('Sending message:', message, 'Attempt:', retryCount + 1);
     
     // Call API
     fetch(`${API_URL}/resilience`, {
@@ -124,19 +161,36 @@ function sendMessage() {
         console.log('Response data:', data);
         if (data.status === 'success') {
             displayAgentResponse(data);
+            // Reset UI on success
+            isProcessing = false;
+            sendButton.disabled = false;
+            buttonText.textContent = 'Send Message';
+            toggleSendButton();
         } else {
             throw new Error(data.message || 'Request failed');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        displayErrorMessage(error.message);
-    })
-    .finally(() => {
-        isProcessing = false;
-        sendButton.disabled = false;
-        buttonText.textContent = 'Send Message';
-        toggleSendButton();
+        
+        // Retry logic: If first request fails (likely stale connection), wake up and retry
+        if (retryCount < 1) {
+            console.log('Request failed, waking up service and retrying...');
+            buttonText.innerHTML = '<span class="loading-spinner"></span> Reconnecting...';
+            
+            // Wake up service and retry after 2 seconds
+            wakeUpService();
+            setTimeout(() => {
+                sendMessage(retryCount + 1);
+            }, 2000);
+        } else {
+            // After retry, show error
+            displayErrorMessage(error.message);
+            isProcessing = false;
+            sendButton.disabled = false;
+            buttonText.textContent = 'Send Message';
+            toggleSendButton();
+        }
     });
 }
 
